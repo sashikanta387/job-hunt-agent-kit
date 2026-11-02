@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job Hunt Board</title>
+</head><body>
+<!-- Job Hunt Board: a kanban for the job-hunt agents. Publish as a Claude artifact with the
+     db and user capabilities (docs/BOARD.md). Data lives in the artifact database:
+     collection "jobs" (one doc per job) and collection "agent" (docs "strategy" and "log"). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: tracker-style app — top bar, view tabs + filters, "due soon" strip, then a horizontal kanban (or list) */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --sunken:#e4e8f0; --ink:#0f172a; --muted:#475569; --line:#d5dbe5;
+  --brand:#4338ca; --brand-ink:#ffffff; --brand-soft:#e0e7ff; --focus:#6366f1;
+  --todo:#a8380c; --todo-bg:#ffedd5; --applied:#1d4ed8; --applied-bg:#dbeafe; --ref:#7e22ce; --ref-bg:#f3e8ff;
+  --int:#115e59; --int-bg:#ccfbf1; --offer:#166534; --offer-bg:#dcfce7; --hold:#475569; --hold-bg:#e2e8f0; --next:#be185d; --next-bg:#fce7f3;
+  --rej:#b91c1c; --rej-bg:#fee2e2; --warn:#f59e0b;
+  --shadow:0 1px 2px rgba(15,23,42,.12),0 0 0 1px rgba(15,23,42,.06);
+  --head:"Inter Tight","Segoe UI",system-ui,sans-serif; --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --surface:#1a2029; --sunken:#131920; --ink:#e5e9f0; --muted:#a3adbd; --line:#2e3846;
+  --brand:#a5b4fc; --brand-ink:#0f141a; --brand-soft:#1e1b4b; --focus:#818cf8;
+  --todo:#fdba74; --todo-bg:#431407; --applied:#93c5fd; --applied-bg:#172554; --ref:#d8b4fe; --ref-bg:#3b0764;
+  --int:#5eead4; --int-bg:#06302d; --offer:#86efac; --offer-bg:#052e16; --hold:#cbd5e1; --hold-bg:#1e293b; --next:#f9a8d4; --next-bg:#500724;
+  --rej:#fca5a5; --rej-bg:#450a0a; --warn:#fbbf24;
+  --shadow:0 0 0 1px #2e3846; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141a; --surface:#1a2029; --sunken:#131920; --ink:#e5e9f0; --muted:#a3adbd; --line:#2e3846;
+  --brand:#a5b4fc; --brand-ink:#0f141a; --brand-soft:#1e1b4b; --focus:#818cf8;
+  --todo:#fdba74; --todo-bg:#431407; --applied:#93c5fd; --applied-bg:#172554; --ref:#d8b4fe; --ref-bg:#3b0764;
+  --int:#5eead4; --int-bg:#06302d; --offer:#86efac; --offer-bg:#052e16; --hold:#cbd5e1; --hold-bg:#1e293b; --next:#f9a8d4; --next-bg:#500724;
+  --rej:#fca5a5; --rej-bg:#450a0a; --warn:#fbbf24;
+  --shadow:0 0 0 1px #2e3846; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--body);margin:0}
+button,select,input,textarea{font:inherit;color:inherit}
+a{color:var(--brand)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.top{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.logo{width:30px;height:30px;border-radius:6px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font:700 13px var(--head)}
+.top h1{font:700 18px var(--head);margin:0}
+.top .crumb{font-size:12px;color:var(--muted)}
+.top .sp{flex:1}
+.btn{border:0;border-radius:4px;padding:7px 12px;font-weight:700;cursor:pointer;background:var(--sunken);color:var(--ink)}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.danger{background:var(--rej);color:var(--surface)}
+.btn.subtle{background:transparent}
+.wrap{padding:16px;display:grid;gap:14px;max-width:1600px;margin:0 auto}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;gap:2px;background:var(--sunken);border-radius:6px;padding:3px}
+.tabs button{border:0;background:transparent;padding:5px 12px;border-radius:4px;font-weight:700;cursor:pointer;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.toolbar input[type=search]{flex:0 1 240px;min-width:0;padding:6px 10px;border:2px solid var(--line);border-radius:4px;background:var(--surface)}
+.toolbar select{padding:6px 8px;border:2px solid var(--line);border-radius:4px;background:var(--surface)}
+.toggle{display:inline-flex;gap:6px;align-items:center;font-weight:700;color:var(--muted);cursor:pointer;user-select:none}
+.stats{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.stats b{color:var(--ink);font:700 15px var(--head);font-variant-numeric:tabular-nums}
+.strip{background:var(--surface);border-radius:8px;box-shadow:var(--shadow);padding:12px 14px;display:grid;gap:8px;min-width:0}
+.strip h2{font:700 12px var(--head);margin:0;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.duelist{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.dueitem{flex:0 0 260px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;display:grid;gap:4px;cursor:pointer;background:var(--surface);text-align:left}
+.dueitem:hover{background:var(--sunken)}
+.board{display:flex;gap:10px;overflow-x:auto;align-items:flex-start;padding-bottom:8px}
+.col{flex:0 0 272px;background:var(--sunken);border-radius:8px;display:flex;flex-direction:column;max-height:calc(100vh - 120px);min-height:120px}
+.col{border-top:4px solid var(--cc,var(--line))}
+.col.c-todo{--cc:var(--todo)} .col.c-applied{--cc:var(--applied)} .col.c-ref{--cc:var(--ref)} .col.c-int{--cc:var(--int)} .col.c-offer{--cc:var(--offer)} .col.c-hold{--cc:var(--hold)} .col.c-next{--cc:var(--next)} .col.c-rej{--cc:var(--rej)}
+.col .colhead{color:var(--cc,var(--muted))}
+.col.drop{outline:2px dashed var(--brand);outline-offset:-2px}
+.colhead{display:flex;align-items:center;gap:8px;padding:10px 10px 6px;font:700 12px var(--head);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.colhead .cnt{background:var(--surface);border-radius:10px;padding:0 7px;font:600 12px var(--mono);color:var(--ink)}
+.colhead .dot{width:8px;height:8px;border-radius:50%}
+.colbody{overflow-y:auto;padding:4px 8px 10px;display:grid;gap:6px;align-content:start}
+.more{border:0;background:transparent;color:var(--muted);font-weight:700;cursor:pointer;padding:6px}
+.card{background:var(--surface);border-radius:6px;box-shadow:var(--shadow);padding:10px 10px 8px 12px;display:grid;gap:6px;cursor:pointer;text-align:left;border:0;width:100%;position:relative}
+.card:hover{background:color-mix(in srgb,var(--surface) 90%,var(--brand))}
+.card{border-left:4px solid var(--sc,transparent)}
+.card.s-todo{--sc:var(--todo)} .card.s-applied{--sc:var(--applied)} .card.s-ref{--sc:var(--ref)} .card.s-int{--sc:var(--int)} .card.s-offer{--sc:var(--offer)} .card.s-hold{--sc:var(--hold)} .card.s-next{--sc:var(--next)} .card.s-rej{--sc:var(--rej)}
+.card.urgent::before,.card.over::before{content:"";position:absolute;right:0;top:6px;bottom:6px;width:4px;border-radius:3px 0 0 3px;background:var(--brand)}
+.card.over::before{background:var(--rej)}
+.card .co{font-weight:700;font-size:14px;line-height:1.3}
+.card .role{font-size:13px}
+.sub{font-size:12.5px;color:var(--muted)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.key{font:500 11.5px var(--mono);color:var(--muted)}
+.d-todo{background:var(--todo)} .d-applied{background:var(--applied)} .d-ref{background:var(--ref)} .d-int{background:var(--int)} .d-offer{background:var(--offer)} .d-hold{background:var(--hold)} .d-next{background:var(--next)} .d-rej{background:var(--rej)}
+.l-todo{background:var(--todo-bg);color:var(--todo)} .l-applied{background:var(--applied-bg);color:var(--applied)} .l-ref{background:var(--ref-bg);color:var(--ref)}
+.l-int{background:var(--int-bg);color:var(--int)} .l-offer{background:var(--offer-bg);color:var(--offer)} .l-hold{background:var(--hold-bg);color:var(--hold)} .l-next{background:var(--next-bg);color:var(--next)}
+.stage{display:inline-block;background:var(--next-bg);color:var(--next);border-radius:3px;padding:0 6px;font:700 11px var(--body);line-height:18px} .l-rej{background:var(--rej-bg);color:var(--rej)}
+.plat{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.pi{width:16px;height:16px;border-radius:3px;display:inline-grid;place-items:center;font:700 9px var(--mono);color:#fff}
+.due{display:inline-flex;align-items:center;border-radius:3px;padding:0 6px;font:700 11.5px var(--body);line-height:20px;white-space:nowrap}
+.due{--dc:var(--brand);--dbg:var(--brand-soft)}
+.due.k-int{--dc:var(--int);--dbg:var(--int-bg)} .due.k-apply{--dc:var(--todo);--dbg:var(--todo-bg)} .due.k-reply{--dc:var(--ref);--dbg:var(--ref-bg)}
+.due.later{background:var(--dbg);color:var(--dc);box-shadow:inset 0 0 0 1px var(--dc)}
+.due.soon{background:var(--dc);color:var(--surface)}
+.due.over{background:var(--rej);color:var(--surface)}
+.mode{display:inline-block;border:1.5px solid currentColor;border-radius:3px;padding:0 5px;font:700 11px var(--body);line-height:18px}
+.mode.f2f{color:var(--int)} .mode.virtual{color:var(--ref)}
+.appl{display:inline-block;background:var(--applied);color:var(--surface);border-radius:3px;padding:0 6px;font:700 11px var(--body);line-height:18px}
+.links{display:flex;gap:2px 10px;flex-wrap:wrap;font-size:12px}
+.links a{font-weight:700;text-decoration:none} .links a:hover{text-decoration:underline}
+.tablebox{overflow-x:auto;background:var(--surface);border-radius:8px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:900px}
+th{font:700 12px var(--head);color:var(--muted);text-align:left;padding:10px 12px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr[data-id]{cursor:pointer} tr[data-id]:hover td{background:var(--sunken)}
+td.date{font:500 12px var(--mono);color:var(--muted);white-space:nowrap}
+select.stsel{border:0;border-radius:3px;font:700 11px var(--body);text-transform:uppercase;padding:2px 4px;cursor:pointer}
+.empty{color:var(--muted);padding:12px;text-align:center}
+.msg{font-size:13px;color:var(--muted);min-height:18px}
+.sheet{position:fixed;inset:0;background:rgba(9,30,66,.54);display:grid;place-items:center;padding:16px;z-index:5}
+.modal{background:var(--surface);border-radius:8px;width:min(720px,100%);max-height:92vh;overflow:auto;box-shadow:0 8px 24px rgba(9,30,66,.4);display:grid;grid-template-columns:1fr 220px}
+@media (max-width:640px){.modal{grid-template-columns:1fr}}
+.mmain{padding:20px;display:grid;gap:12px;align-content:start;min-width:0}
+.mside{padding:20px;background:var(--bg);display:grid;gap:12px;align-content:start;border-left:1px solid var(--line)}
+.mmain input.big{font:700 20px var(--head);border:2px solid transparent;border-radius:4px;padding:4px 6px;background:transparent;width:100%}
+.mmain input.big:hover,.mmain input.big:focus{border-color:var(--line);background:var(--surface)}
+label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
+label input,label select,label textarea{padding:7px 9px;border:2px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);font-weight:400;font-size:14px;min-width:0}
+.mfoot{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+@media (prefers-reduced-motion:no-preference){.card,.dueitem{transition:background .12s}}
+</style>
+
+<div class="top">
+  <div class="logo" aria-hidden="true">JH</div>
+  <div><div class="crumb">Job search</div><h1>Job Hunt Board</h1></div>
+  <div class="sp"></div>
+  <button class="btn primary" id="addBtn">+ Create</button>
+</div>
+
+<div class="wrap">
+  <div class="toolbar">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabBoard" aria-selected="true">Board</button>
+      <button role="tab" id="tabList" aria-selected="false">List</button>
+    </div>
+    <input type="search" id="q" placeholder="Search jobs" aria-label="Search jobs">
+    <select id="fPlat" aria-label="Platform"><option value="">All platforms</option></select>
+    <label class="toggle"><input type="checkbox" id="onlyAct"> Needs my action</label>
+    <label class="toggle"><input type="checkbox" id="showRej"> Show rejected</label>
+  </div>
+  <div class="stats" id="stats"></div>
+
+  <section class="strip" id="focusBox" aria-labelledby="focusH" hidden>
+    <h2 id="focusH">Agent focus this week</h2>
+    <div class="sub" id="focus"></div>
+  </section>
+
+  <section class="strip" aria-labelledby="dueH">
+    <h2 id="dueH">Due soon &amp; upcoming interviews</h2>
+    <div class="duelist" id="duelist"><span class="empty">Loading…</span></div>
+  </section>
+
+  <div id="boardView"><div class="board" id="board"></div></div>
+  <div id="listView" hidden>
+    <div class="tablebox"><table>
+      <thead><tr><th>Key</th><th>Company / role</th><th>Status</th><th>Platform</th><th>Due</th><th>Next step</th><th>Date</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </div>
+  <div class="msg" id="msg"></div>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <form class="modal" id="form">
+    <div class="mmain">
+      <div class="key" id="mKey"></div>
+      <input class="big" id="f-company" placeholder="Company" required aria-label="Company">
+      <label>Role<input id="f-role" required></label>
+      <label>Next step<input id="f-next" placeholder="What you need to do next"></label>
+      <label>Notes<textarea id="f-notes" rows="4"></textarea></label>
+      <label>Job post link<input id="f-link" type="url" placeholder="https://"></label>
+      <label>Email link<input id="f-mail" type="url" placeholder="Gmail thread link"></label>
+      <div class="links" id="mLinks"></div>
+    </div>
+    <div class="mside">
+      <label>Status<select id="f-status"></select></label>
+      <label>Platform<select id="f-platform"></select></label>
+      <label>Deadline / interview time<input id="f-due" type="datetime-local"></label>
+      <label>Deadline label<input id="f-dueLabel" placeholder="Interview, Apply by…"></label>
+      <label>Round / stage<input id="f-stage" placeholder="e.g. L0 cleared · Round 2 next"></label>
+      <label>Interview mode<select id="f-mode"><option value="">—</option><option>Face to face</option><option>Virtual</option></select></label>
+      <label>Contact<input id="f-contact"></label>
+      <label>Date added<input id="f-date" type="date"></label>
+      <label>Applied on<input id="f-appliedOn" type="date"></label>
+    </div>
+    <div class="mfoot">
+      <button type="button" class="btn danger" id="delBtn" hidden>Delete</button>
+      <span style="flex:1"></span>
+      <button type="button" class="btn subtle" id="cancelBtn">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</div>
+
+<script>
+/* ---- Edit these two lists to match your search ----
+   PLATFORMS: where a job came from -> [short badge text, badge colour]. Remove portals you don't use.
+   STATUSES: board columns, left to right. The agents write these exact names, so rename with care. */
+const PLATFORMS={"Naukri":["N","#4a90e2"],"LinkedIn":["in","#0a66c2"],"Hirist":["H","#e8590c"],"Instahyre":["IH","#2f9e8f"],"Talent500":["T5","#5b4bd6"],"Career site":["CS","#6b778c"],"Referral":["R","#8270db"],"Recruiter / email":["@","#1f845a"],"Agency":["A","#c9372c"]};
+const STATUSES=[{k:"To apply",c:"todo"},{k:"To be applied on career site",c:"todo"},{k:"Action needed",c:"next"},{k:"Applied",c:"applied"},{k:"Referral asked",c:"ref"},{k:"Interview scheduled",c:"int"},{k:"Interview",c:"int"},{k:"Next round",c:"next"},{k:"Offer",c:"offer"},{k:"On hold",c:"hold"},{k:"Rejected",c:"rej"}];
+/* ---- end of settings ---- */
+const ST=STATUSES,PL=PLATFORMS;
+const FIELDS=["company","role","platform","status","date","appliedOn","contact","link","mail","next","due","dueLabel","mode","stage","notes"];
+const sc=s=>(ST.find(x=>x.k===s)||ST[1]).c;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let jobs=[],db=null,editing=null,delArmed=false,view="board",expanded={},keys={};
+try{view=localStorage.getItem("jhView")||"board"}catch(e){}
+ST.forEach(s=>$("f-status").add(new Option(s.k,s.k)));
+Object.keys(PL).forEach(p=>{$("fPlat").add(new Option(p,p));$("f-platform").add(new Option(p,p))});
+
+function makeKeys(){const s=[...jobs].sort((a,b)=>(a.date||"0").localeCompare(b.date||"0")||a.id.localeCompare(b.id));keys={};s.forEach((j,i)=>keys[j.id]="JH-"+(i+1))}
+function dueInfo(j){if(!j.due)return null;const d=new Date(j.due);if(isNaN(d))return null;const diff=d-Date.now();const k=diff<0?"over":diff<36e5*36?"soon":"later";
+  const t=d.toLocaleString(undefined,{weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+  const lb=(j.dueLabel||"").toLowerCase();const kind=/interview|round|\bl[0-9]\b|f2f/.test(lb)||/^Interview/.test(j.status)?"int":/apply/.test(lb)||j.status==="To apply"?"apply":/reply|confirm|respond|send|share/.test(lb)?"reply":"other";
+  return {k,d,html:`<span class="due ${k} k-${kind}">${k==="over"?"Overdue · ":""}${esc(j.dueLabel||"Due")} · ${t}</span>`}}
+const modeTag=j=>j.mode?`<span class="mode ${j.mode==="Face to face"?"f2f":"virtual"}">${j.mode==="Face to face"?"Face to face":"Virtual"}</span>`:"";
+const APPLIED_ST=["Applied","Interview scheduled","Interview","Next round","Offer","Rejected"];
+function appliedOn(j){const v=j.appliedOn||(APPLIED_ST.includes(j.status)?j.date:"");if(!v)return "";const d=new Date(v+"T12:00:00");return isNaN(d)?esc(v):d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})}
+const appliedTag=j=>{const t=appliedOn(j);return t?`<span class="appl" title="Date applied">Applied · ${t}</span>`:""};
+const stageTag=j=>j.stage?`<span class="stage">${esc(j.stage)}</span>`:"";
+const platIcon=p=>{const v=PL[p]||["?","#6b778c"];return `<span class="plat"><span class="pi" style="background:${v[1]}">${v[0]}</span>${esc(p||"")}</span>`};
+const A=(u,t)=>`<a href="${esc(u)}" target="_blank" rel="noopener">${t}</a>`;
+function linksHtml(j){const p=[];if(j.link)p.push(A(j.link,"Job post ↗"));if(j.mail)p.push(A(j.mail,"Email ↗"));
+  (Array.isArray(j.refs)?j.refs:[]).forEach(r=>r&&r.url&&p.push(A(r.url,"Referral: "+esc(r.name||"profile")+" ↗")));return p.length?`<div class="links">${p.join("")}</div>`:""}
+const needsAction=j=>j.status!=="Rejected"&&(!!j.due||["To apply","To be applied on career site","Action needed","Interview scheduled","Interview","Next round","Offer"].includes(j.status));
+function filtered(){const q=$("q").value.trim().toLowerCase(),fp=$("fPlat").value,oa=$("onlyAct").checked;
+  return jobs.filter(j=>(!fp||j.platform===fp)&&(!oa||needsAction(j))&&(!q||[j.company,j.role,j.contact,j.notes,j.next].join(" ").toLowerCase().includes(q)))}
+function sortCards(a,b){const da=dueInfo(a),dbb=dueInfo(b);if(da&&dbb)return da.d-dbb.d;if(da)return -1;if(dbb)return 1;return (b.date||"").localeCompare(a.date||"")}
+const addedTs=j=>{const t=Date.parse(j.created||j.updated||"");return isNaN(t)?0:t};
+function sortNewest(a,b){return (b.date||"").localeCompare(a.date||"")||addedTs(b)-addedTs(a)||(keys[b.id]||"").localeCompare(keys[a.id]||"",undefined,{numeric:true})}
+
+function card(j){const du=dueInfo(j);return `<div class="card s-${sc(j.status)}${du?(du.k==="over"?" over":du.k==="soon"?" urgent":""):""}" data-id="${esc(j.id)}" draggable="true" tabindex="0" role="button" aria-label="${esc(j.company)}">
+  <div class="co">${esc(j.company)}</div><div class="role">${esc(j.role)}</div>
+  ${du||j.mode||j.stage||appliedOn(j)?`<div class="row">${stageTag(j)}${appliedTag(j)}${du?du.html:""}${modeTag(j)}</div>`:""}
+  ${j.next?`<div class="sub">${esc(j.next)}</div>`:""}
+  ${linksHtml(j)}
+  <div class="foot">${platIcon(j.platform)}<span class="key">${keys[j.id]||""}</span></div></div>`}
+function renderStats(){const c=s=>jobs.filter(j=>j.status===s).length;
+  $("stats").innerHTML=`<span><b>${jobs.length}</b> total</span><span><b>${c("Applied")+c("Referral asked")}</b> in progress</span><span><b>${c("Interview scheduled")+c("Interview")+c("Next round")}</b> interviewing</span><span><b>${c("Next round")}</b> cleared a round</span><span><b>${c("Offer")}</b> offer</span><span><b>${jobs.filter(needsAction).length}</b> need action</span><span><b>${c("Rejected")}</b> closed</span>`}
+function renderStrip(){const list=jobs.filter(j=>j.status!=="Rejected"&&dueInfo(j)).sort(sortCards);
+  $("duelist").innerHTML=list.length?list.map(j=>{const du=dueInfo(j);return `<button class="dueitem" data-id="${esc(j.id)}"><div class="row">${stageTag(j)}${du.html}${modeTag(j)}</div><div style="font-weight:700">${esc(j.company)}</div><div class="sub">${esc(j.next||j.role)}</div></button>`}).join(""):`<span class="empty">Nothing due right now.</span>`}
+function renderBoard(){const list=filtered();const cols=ST.filter(s=>s.k!=="Rejected"||$("showRej").checked);
+  $("board").innerHTML=cols.map(s=>{const items=list.filter(j=>(ST.some(x=>x.k===j.status)?j.status:"Applied")===s.k).sort(sortNewest);const lim=expanded[s.k]?items.length:25;
+    return `<section class="col c-${s.c}" data-status="${s.k}" aria-label="${s.k}"><div class="colhead"><span class="dot d-${s.c}"></span>${s.k}<span class="cnt">${items.length}</span></div>
+    <div class="colbody">${items.slice(0,lim).map(card).join("")||`<div class="empty">No jobs</div>`}${items.length>lim?`<button class="more" data-more="${s.k}">Show ${items.length-lim} more</button>`:""}</div></section>`}).join("")}
+function renderList(){const list=filtered().filter(j=>$("showRej").checked||j.status!=="Rejected").sort(sortNewest);
+  $("rows").innerHTML=list.length?list.map(j=>{const du=dueInfo(j);return `<tr data-id="${esc(j.id)}"><td class="key">${keys[j.id]||""}</td>
+    <td><div style="font-weight:700">${esc(j.company)}</div><div>${esc(j.role)}</div>${linksHtml(j)}</td>
+    <td><select class="stsel l-${sc(j.status)}" data-st="${esc(j.id)}" aria-label="Status">${ST.map(s=>`<option${s.k===j.status?" selected":""}>${s.k}</option>`).join("")}</select></td>
+    <td>${platIcon(j.platform)}</td><td><div class="row">${stageTag(j)}${appliedTag(j)}${du?du.html:""}${modeTag(j)}</div></td>
+    <td style="font-size:13px">${esc(j.next||"")}${j.contact?`<div class="key">${esc(j.contact)}</div>`:""}</td><td class="date">${esc(j.date||"—")}</td></tr>`}).join(""):`<tr><td colspan="7" class="empty">No jobs match.</td></tr>`}
+function render(){makeKeys();renderStats();renderStrip();
+  $("boardView").hidden=view!=="board";$("listView").hidden=view!=="list";
+  $("tabBoard").setAttribute("aria-selected",view==="board");$("tabList").setAttribute("aria-selected",view==="list");
+  view==="board"?renderBoard():renderList()}
+function setView(v){view=v;try{localStorage.setItem("jhView",v)}catch(e){}render()}
+$("tabBoard").onclick=()=>setView("board");$("tabList").onclick=()=>setView("list");
+["q","fPlat","onlyAct","showRej"].forEach(id=>$(id).addEventListener("input",render));
+
+document.addEventListener("click",e=>{
+  if(e.target.closest("a,select,.modal"))return;
+  const m=e.target.closest("[data-more]");if(m){expanded[m.dataset.more]=true;renderBoard();return}
+  const c=e.target.closest(".card,.dueitem,tr[data-id]");if(c)openForm(jobs.find(x=>x.id===c.dataset.id));
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){$("sheet").hidden=true;return}
+  if(e.key==="Enter"){const c=e.target.closest&&e.target.closest(".card");if(c)openForm(jobs.find(x=>x.id===c.dataset.id))}});
+$("rows").addEventListener("change",e=>{const s=e.target.closest("[data-st]");if(!s)return;const j=jobs.find(x=>x.id===s.dataset.st);save(j.id,{...j,status:s.value})});
+let dragId=null;
+$("board").addEventListener("dragstart",e=>{const c=e.target.closest(".card");if(!c)return;dragId=c.dataset.id;e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",dragId)}catch(_){}});
+$("board").addEventListener("dragover",e=>{const col=e.target.closest(".col");if(!col||!dragId)return;e.preventDefault();document.querySelectorAll(".col.drop").forEach(x=>x!==col&&x.classList.remove("drop"));col.classList.add("drop")});
+$("board").addEventListener("drop",e=>{const col=e.target.closest(".col");if(!col||!dragId)return;e.preventDefault();col.classList.remove("drop");
+  const j=jobs.find(x=>x.id===dragId);dragId=null;if(j&&j.status!==col.dataset.status)save(j.id,{...j,status:col.dataset.status})});
+$("board").addEventListener("dragend",()=>{dragId=null;document.querySelectorAll(".col.drop").forEach(x=>x.classList.remove("drop"))});
+
+function toLocalInput(v){if(!v)return"";const d=new Date(v);if(isNaN(d))return"";const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
+function openForm(j){if(!j&&editing===undefined)return;editing=j?j.id:null;delArmed=false;$("delBtn").hidden=!j;$("delBtn").textContent="Delete";
+  $("mKey").textContent=j?(keys[j.id]||"")+" · "+(j.status||""):"New job";
+  const v=j||{status:"Applied",platform:"LinkedIn",date:new Date().toISOString().slice(0,10)};
+  FIELDS.forEach(k=>{const el=$("f-"+k);if(el)el.value=k==="due"?toLocalInput(v.due):(v[k]||"")});
+  $("mLinks").innerHTML=j?linksHtml(j):"";$("sheet").hidden=false;$("f-company").focus()}
+$("addBtn").onclick=e=>{e.stopPropagation();openForm(null)};
+$("cancelBtn").onclick=()=>{$("sheet").hidden=true};
+$("sheet").addEventListener("mousedown",e=>{if(e.target===$("sheet"))$("sheet").hidden=true});
+$("delBtn").onclick=async()=>{if(!delArmed){delArmed=true;$("delBtn").textContent="Click again to delete";return}
+  try{await db.collection("jobs").doc(editing).delete();$("sheet").hidden=true;flash("Deleted")}catch(e){flash("Couldn't delete: "+(e.message||e.code))}};
+$("form").addEventListener("submit",async e=>{e.preventDefault();const old=editing?jobs.find(x=>x.id===editing)||{}:{};const d={...old};
+  FIELDS.forEach(k=>{const el=$("f-"+k);if(!el)return;let val=el.value.trim();if(k==="due"&&val){const t=new Date(val);val=isNaN(t)?"":t.toISOString()}d[k]=val});
+  const id=editing||(d.company+"-"+d.role).toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,60)+"-"+Date.now().toString(36);
+  await save(id,d);$("sheet").hidden=true});
+async function save(id,d){if(!db){flash("Sign in to claude.ai to save changes.");return}
+  const body={...d};delete body.id;Object.keys(body).forEach(k=>{if(body[k]===""||body[k]==null)delete body[k]});body.updated=new Date().toISOString();if(!body.created)body.created=body.updated;
+  try{await db.collection("jobs").doc(id).set(body);flash("Saved")}catch(e){flash("Couldn't save: "+(e.message||e.code))}}
+let t;function flash(s){$("msg").textContent=s;clearTimeout(t);t=setTimeout(()=>$("msg").textContent="",2500)}
+setInterval(()=>{if(jobs.length){renderStats();renderStrip();if(view==="board")renderBoard()}},60000);
+
+render();
+(async()=>{db=await window.claude?.use?.("db");
+  if(!db){$("duelist").innerHTML=`<span class="empty">Sign in to claude.ai to load your jobs.</span>`;return}
+  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>flash("Couldn't load jobs: "+(e.message||e.code)));
+  // Read-only view of what the Strategist agent decided (collection "agent", doc "strategy").
+  db.collection("agent").doc("strategy").onSnapshot(s=>{const v=s.exists?s.data():null;const f=v&&Array.isArray(v.current_focus)?v.current_focus:[];
+    $("focusBox").hidden=!v;if(v)$("focus").innerHTML=(f.length?"<ul style=\"margin:0;padding-left:18px\">"+f.map(x=>`<li>${esc(x)}</li>`).join("")+"</ul>":"No focus set yet.")+(v.version_note?`<div class="key" style="margin-top:4px">${esc(v.version_note)}</div>`:"")},()=>{})})();
+</script>
+
+</body></html>

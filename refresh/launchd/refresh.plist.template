@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Rendered by setup.sh from settings.yaml. Edit the template or settings, not the copy in ~/Library/LaunchAgents. -->
+<plist version="1.0"><dict>
+  <key>Label</key><string>{{LABEL}}</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/bash</string><string>{{KIT_HOME}}/refresh/run_daily.sh</string><string>{{PORTAL}}</string>
+  </array>
+  {{SCHEDULE}}
+  <key>StandardOutPath</key><string>{{LOG_DIR}}/{{PORTAL}}-launchd.out</string>
+  <key>StandardErrorPath</key><string>{{LOG_DIR}}/{{PORTAL}}-launchd.err</string>
+</dict></plist>

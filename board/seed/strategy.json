@@ -1,0 +1,13 @@
+{
+  "version_note": "v1 - initial strategy; the Strategist agent rewrites this every week",
+  "goal": "{{goal}}",
+  "weekly_targets": {"applications": 20, "career_site_jobs_sent": 6, "referral_drafts": 5, "follow_up_drafts": 5},
+  "platform_weights": "{{platform_weights}}",
+  "searches": "{{searches}}",
+  "resume_map": "{{resume_map}}",
+  "target_company_types": ["Product/SaaS companies", "Captive tech centres (GCCs)", "Funded startups with clear ownership roles"],
+  "avoid": "{{avoid}}",
+  "follow_up_rules": "Recruiter/HR silent 3+ working days after an interview -> polite follow-up as a Gmail DRAFT (never send). Referral asked 5+ days with no reply -> apply directly.",
+  "learnings": [],
+  "current_focus": ["First week: apply in small batches, check what the board records, adjust searches"]
+}

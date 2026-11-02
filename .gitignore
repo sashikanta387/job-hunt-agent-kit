@@ -1,0 +1,14 @@
+# Your real settings and anything personal - never commit
+config/settings.yaml
+*_state.json
+*_last_success
+logs/
+*.log
+*debug*/
+.venv/
+build/
+tailored/
+*.docx
+*.pdf
+.DS_Store
+__pycache__/

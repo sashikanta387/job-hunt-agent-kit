@@ -1,0 +1,150 @@
+# Job Hunt Agent Kit - settings
+#
+# Copy this file to config/settings.yaml (setup.sh does it for you) and replace every value.
+# config/settings.yaml is git-ignored: your real details never get committed.
+# Everything the agents are allowed to say about you comes from this file. If it isn't here,
+# they won't claim it.
+
+# --- About you ---------------------------------------------------------------------------
+candidate:
+  name: "Alex Doe"
+  email: "alex.doe@example.com"          # agents send reports/briefs ONLY to this address
+  home_city: "Bengaluru"
+  headline: "Senior QA Engineer | Test Automation (Playwright) | API Testing | CI/CD"
+  linkedin_url: "https://www.linkedin.com/in/alex-doe-example"
+  github_url: "https://github.com/alex-doe-example"
+  portfolio_url: ""                      # optional
+  current_role: "Senior QA Engineer"     # use your official designation
+  current_company: "Example Corp"
+  current_role_period: "Jan 2019 - present"
+
+  # True statements the agents may use in applications, summaries and prep briefs.
+  # Write them the way you'd say them in an interview. Numbers only if you can back them up.
+  facts:
+    - "8 years in QA, 6 in test automation"
+    - "Built and maintain Playwright (JavaScript) UI and API suites run in GitHub Actions"
+    - "Cut regression time from 4 days to 2 by parallelising the suite"
+    - "Mentored 4 junior QA engineers"
+    - "B.Tech in Computer Science, Example University, 2016"
+
+  # Short STAR-style wins for interview prep briefs (optional; reuse facts if empty).
+  achievements:
+    - "Regression 4 days -> 2 days after parallelising and removing flaky tests"
+    - "Pass rate 82% -> 96% by fixing flaky locators and test data"
+
+  # Tools/skills you have NOT used. Agents never claim these and skip jobs that hard-require them.
+  never_claim: ["Cypress", "Python", "AWS", "Azure DevOps"]
+
+  # Years per skill, used for screening questions ("How many years of X?").
+  years:
+    total: 8
+    automation: 6
+    playwright: 3
+    api_testing: 5
+    selenium: 3
+    sql: 2
+    manual_testing: 8
+
+  # Positive, honest answer to "why are you looking for a change?"
+  why_change: "Looking to grow into a lead role with broader ownership of quality."
+
+  # Extra lines the agent may use on screening forms. Never put ID numbers or passwords here.
+  screening_extra:
+    - "Willing to work from office in Bengaluru"
+    - "Open to face-to-face interviews"
+
+# --- What you're looking for ---------------------------------------------------------------
+search:
+  target_roles: ["QA Automation Lead", "Senior SDET", "Test Lead"]
+  locations: ["Bengaluru"]
+  remote_ok: true                        # also consider remote roles in your country
+  remote_region: "India"
+  salary_floor:                          # skip roles that clearly pay below this (yearly)
+    amount: 2000000
+    currency: "INR"
+  current_ctc: "16 LPA"                  # as you want it written on forms
+  expected_ctc: "21 LPA"
+  notice_period: "30 days"               # e.g. "Immediate", "30 days"
+  min_years_required: 5                  # skip junior roles below this
+  skip_companies: []                     # companies you don't want applications sent to
+
+# --- Schedule & safety -------------------------------------------------------------------
+timezone: "Asia/Kolkata"                 # IANA name; used for cron times and date stamps
+browser_locale: "en-IN"                  # locale the refresh browser reports to the job sites
+
+# true  = agents search and log matching jobs on the board but NEVER submit an application.
+# false = the coordinator may submit Easy Apply / direct-apply applications that match your rules.
+# Start with true for a week, check the board, then switch.
+test_mode: true
+
+# --- Job portals -------------------------------------------------------------------------
+# enabled: whether the coordinator applies there AND whether the daily resume refresh runs.
+# refresh_times: launchd start times (24h, local). The first is the main slot; the others only
+#   act if the main slot never ran (Mac asleep). Exactly one upload happens per day.
+# retry_until: failed uploads retry every 10 minutes until this time.
+# resume_family: which entry under resumes.families to rotate through on this portal.
+# LinkedIn has no resume refresh (apply only).
+portals:
+  naukri:
+    enabled: true
+    refresh_times: ["09:00", "09:30", "10:30", "12:00"]
+    retry_until: "11:30"
+    resume_family: "lead"
+    headless: false                      # Naukri blocks headless Chrome
+  hirist:
+    enabled: true
+    refresh_times: ["09:15", "09:45", "10:45", "12:15"]
+    retry_until: "11:45"
+    resume_family: "lead"
+  instahyre:
+    enabled: false
+    refresh_times: ["08:15", "08:40", "10:30", "12:15"]
+    retry_until: "11:45"
+    resume_family: "lead"
+  talent500:
+    enabled: false
+    refresh_times: ["09:30", "09:55", "11:00", "12:45"]
+    retry_until: "13:30"
+    resume_family: "lead"
+    profile_url: "https://talent500.com/profile/view/your-profile-id/"   # copy from your browser
+    keepalive_minutes: 120               # extends the login so it never needs an OTP
+  linkedin:
+    enabled: true
+
+# --- Resumes -----------------------------------------------------------------------------
+# Master resumes (.docx or .pdf) per role family. Several files in one family are rotated by
+# day, so each portal sees a "new" file. setup.sh keeps a copy in the install dir, because
+# launchd jobs often can't read ~/Desktop or ~/Documents.
+resumes:
+  families:
+    lead:
+      - "~/JobHunt/resumes/Alex_Doe_QA_Lead.docx"
+      - "~/JobHunt/resumes/Alex_Doe_Senior_SDET.docx"
+    sdet:
+      - "~/JobHunt/resumes/Alex_Doe_Senior_SDET.docx"
+  # Which family the coordinator should use for which kind of job.
+  role_map:
+    "Lead / Test Lead / Manager": "lead"
+    "SDET / Automation Engineer": "sdet"
+
+# tools/tailor_resume.py: makes a JD-specific copy of one master .docx (re-orders, never adds).
+tailor:
+  base_resume: "~/JobHunt/resumes/Alex_Doe_QA_Lead.docx"
+  headline_paragraph: 1                  # index of the headline paragraph (0 = name line)
+  summary_heading: "PROFESSIONAL SUMMARY"
+  skills_heading: "CORE COMPETENCIES"    # paragraph after it = comma-separated skills
+  bullets_start: "Key Achievements"      # bullets between these two lines get re-ordered
+  bullets_end: "EDUCATION"
+  output_dir: "~/JobHunt/tailored"
+
+# --- Where things live -------------------------------------------------------------------
+install_dir: "~/.job-hunt-kit"           # venv, refresh scripts, sessions, logs
+# The folder you connect to the Claude desktop app (Settings > folders). The coordinator runs
+# tools/tailor_resume.py from here, so clone this repo inside it or point it at the clone.
+workspace_folder: "~/JobHunt"
+repo_subpath: "job-hunt-agent-kit"       # repo location inside workspace_folder ("" if it IS the repo)
+
+# Paste after publishing board/index.html as a Claude artifact (see docs/BOARD.md).
+board_url: "https://claude.ai/artifact/your-board-id"
+# Optional: a Google Drive folder where tailored resumes get saved (see docs/GOOGLE_DRIVE.md).
+google_drive_folder_url: ""

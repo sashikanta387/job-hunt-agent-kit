@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Rendered by setup.sh from settings.yaml (Talent500 session keep-alive). -->
+<plist version="1.0"><dict>
+  <key>Label</key><string>{{LABEL}}</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/bash</string><string>{{KIT_HOME}}/refresh/run_keepalive.sh</string>
+  </array>
+  {{SCHEDULE}}
+  <key>StandardOutPath</key><string>{{LOG_DIR}}/{{PORTAL}}-keepalive.out</string>
+  <key>StandardErrorPath</key><string>{{LOG_DIR}}/{{PORTAL}}-keepalive.err</string>
+</dict></plist>
