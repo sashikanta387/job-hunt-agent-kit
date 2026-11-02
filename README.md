@@ -8,6 +8,20 @@ notes the evening before, and once a week look at what's working and adjust the 
 You fork it, fill in one settings file, run one setup script, and paste three prompts into Claude.
 Anything risky (messages to recruiters, OTPs, offers) stays with you.
 
+## Quick start
+
+Get the repo into `~/JobHunt/job-hunt-agent-kit` on your Mac (see step 1 below), then pick one:
+
+- **Option 1: Set up with Claude (easiest).** Connect `~/JobHunt` in the Claude desktop app and
+  paste the one prompt from [SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md). Claude reads your resume,
+  asks a few questions, writes your settings and creates the board and agents. You run two
+  commands and sign in to your job sites yourself.
+- **Option 2: Terminal wizard.** Run `./start.sh`. It checks your Mac, asks plain questions
+  (no YAML editing), installs everything, signs you in to each site and copies the agent prompts
+  for you. Safe to run again any time.
+
+Something not working? `./scripts/doctor.sh` checks everything and prints the fix.
+
 Created by Sashikanta Behera, who built and used the original version during his own job search.
 Released under the MIT license.
 
@@ -53,11 +67,11 @@ flowchart LR
 - Gmail and Google Calendar connected in Claude.
 - Accounts on the portals you enable, and your resumes as .docx (or .pdf).
 
-## Quick start in 6 steps
+## Manual setup in 6 steps
 
 1. **Fork and clone** this repo into a folder you'll connect to the Claude desktop app, e.g. `~/JobHunt/job-hunt-agent-kit`.
 2. **Run `./setup.sh`** once. It creates `config/settings.yaml` and stops.
-3. **Fill in `config/settings.yaml`**: your facts, target roles, salary floor, portals, resume paths. Keep `test_mode: true` for now.
+3. **Fill in `config/settings.yaml`** (or run `python3 scripts/wizard.py` to answer questions instead): your facts, target roles, salary floor, portals, resume paths. Keep `test_mode: true` for now.
 4. **Run `./setup.sh` again.** It validates your settings, installs Playwright, schedules the refresh jobs, and writes your agent prompts to `build/prompts/`. Then sign in once per portal: `./scripts/login.sh naukri` (and so on).
 5. **Publish the board** (`board/index.html`) as a Claude artifact, paste its URL into `board_url`, run `./setup.sh` again. See [docs/BOARD.md](docs/BOARD.md).
 6. **Create the three scheduled tasks** in Claude from `build/prompts/*.txt`. See [docs/AGENTS.md](docs/AGENTS.md).
@@ -90,9 +104,11 @@ Adding another one is mostly copying `refresh/portal_template.py`; see [CONTRIBU
 ## Repo layout
 
 ```
-config/       settings.example.yaml - the only file you edit
-setup.sh      one-time (and re-runnable) setup
-scripts/      login, pause, resume, uninstall, validate_config.py, render_prompts.py
+SETUP_WITH_CLAUDE.md  one prompt that has Claude set everything up
+start.sh      the one command for new users (wizard + setup + sign-ins)
+config/       settings.example.yaml - the template for your settings
+setup.sh      install (re-run after any settings change)
+scripts/      wizard.py, doctor.sh, login, pause, resume, uninstall, validate_config.py, render_prompts.py
 refresh/      Playwright resume-refresh jobs + launchd templates
 agents/       prompt templates for the three Claude agents
 board/        the Job Hunt Board page and the starting strategy
@@ -107,6 +123,18 @@ Git-ignored, so they stay on your machine: `config/settings.yaml`, saved portal 
 tailored resumes and any `.docx`/`.pdf`. Portal sessions live in `~/.job-hunt-kit/state` with
 `600` permissions. The optional Naukri password is read from the macOS Keychain, never from a file.
 Your board data lives in your private Claude artifact.
+
+## Known limitations
+
+- macOS only (the daily resume refresh uses launchd). No Windows or Linux support yet.
+- Needs a paid Claude plan with scheduled tasks and the Claude desktop app.
+- The portals are India-focused (Naukri, Hirist, Instahyre, Talent500, plus LinkedIn).
+- Job sites change their layouts; when they do, the refresh scripts need updating
+  (see CONTRIBUTING.md). Expect this now and then.
+- `tools/tailor_resume.py` only works with a .docx resume laid out the way the `tailor` section
+  of your settings describes (headline, summary, skills and bullet sections).
+- Automating job sites may break their terms of service (see the disclaimer below).
+- Not tested on every macOS version.
 
 ## Disclaimer
 

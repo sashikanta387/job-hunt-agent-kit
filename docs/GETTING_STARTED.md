@@ -80,23 +80,42 @@ Open **Terminal** (Spotlight → "Terminal") and run these one at a time.
 
 ---
 
-## Step 3. Create your settings file
+## Step 3. Answer the setup questions
+
+> Prefer to let Claude do Steps 3–9 for you? Paste the prompt from
+> [SETUP_WITH_CLAUDE.md](../SETUP_WITH_CLAUDE.md) into the Claude desktop app instead.
 
 ```bash
 cd ~/JobHunt/job-hunt-agent-kit
-./setup.sh
+./start.sh
 ```
 
-The first run only creates `config/settings.yaml` (a copy of `config/settings.example.yaml`) and
-stops. Open it in any text editor:
+`start.sh` checks your Mac has Python 3 and git (and tells you the exact install command if not),
+then asks you plain questions: your name and email, a few true facts about your experience, the
+jobs and cities you want, salary floor, CTC and notice period, which job sites to use, and where
+your resume files are. Press **Enter** to accept the suggestion in `[brackets]`. It detects your
+timezone, copies the resumes you pick into `~/JobHunt/resumes`, shows a summary, and only writes
+`config/settings.yaml` after you say yes. Test mode stays **on**.
 
-```bash
-open -e config/settings.yaml
-```
+Tips:
+- **Facts** are the only things the agents may say about you. Keep them short and true, e.g.
+  "7 years in QA, 5 in automation".
+- **Tools you have NOT used** (e.g. `Cypress, Python`): jobs that require them are skipped.
+- The board link question comes up at the end; just press Enter for now (Step 6).
+
+To change answers later, run `./start.sh` again and choose **Edit** (your current answers become the
+defaults). `python3 scripts/wizard.py --reset` starts over.
+
+### Advanced: edit settings by hand
+
+Everything the wizard writes lives in `config/settings.yaml`; every field is explained in
+`config/settings.example.yaml`. Open it with `open -e config/settings.yaml`, then run `./setup.sh`.
+The wizard covers the common fields; edit by hand for `achievements`, `refresh_times`, the
+`tailor` section and `google_drive_folder_url`.
 
 Fill it in **top to bottom**. Every field has a comment; here is what matters most.
 
-### 3a. `candidate` — facts about you (the agents may only say what's here)
+#### 3a. `candidate` — facts about you (the agents may only say what's here)
 | Field | Example | Tip |
 |---|---|---|
 | `name`, `email` | Your name; the Gmail the agents email reports to | Reports go **only** to this address |
@@ -108,67 +127,60 @@ Fill it in **top to bottom**. Every field has a comment; here is what matters mo
 | `years` | Years per skill for screening forms | Use the same numbers everywhere |
 | `why_change` | One positive sentence | Used in screening answers and prep briefs |
 
-### 3b. `search` — what you're looking for
+#### 3b. `search` — what you're looking for
 - `target_roles`, `locations`, `remote_ok`, `remote_region`
 - `salary_floor` (yearly amount + currency) — roles clearly below it are skipped
 - `current_ctc`, `expected_ctc`, `notice_period` — written exactly as you want them on forms
 - `min_years_required`, `skip_companies`
 
-### 3c. `timezone`, `test_mode`
+#### 3c. `timezone`, `test_mode`
 - `timezone`: your IANA zone, e.g. `Asia/Kolkata`.
 - **Keep `test_mode: true` for the first week.** In test mode the coordinator finds and logs jobs
   but never submits an application.
 
-### 3d. `portals` — which job sites
+#### 3d. `portals` — which job sites
 For each site set `enabled: true/false`. You can keep the default `refresh_times`. For Talent500,
 paste your own profile URL into `profile_url` (open your profile in the browser and copy the address).
 
-### 3e. `resumes` — which file goes where
+#### 3e. `resumes` — which file goes where
 - `families`: group your resume files, e.g. `lead:` and `sdet:`. If you list 2–3 files in a family,
   they rotate by day.
 - Each portal's `resume_family` says which family it uploads.
 - `role_map`: which family the coordinator uses for which kind of role.
 
-### 3f. `tailor` — only if you want per-job tailored resumes
+#### 3f. `tailor` — only if you want per-job tailored resumes
 Point `base_resume` at your main .docx and tell the tool where its sections are:
 `headline_paragraph`, `summary_heading`, `skills_heading`, `bullets_start`, `bullets_end`
 (the exact heading text in **your** resume). Skip this section if you don't need tailoring.
 
-### 3g. Folders and links
+#### 3g. Folders and links
 - `install_dir`: leave as `~/.job-hunt-kit`.
 - `workspace_folder`: `~/JobHunt`; `repo_subpath`: `job-hunt-agent-kit`.
 - `board_url`: leave for now — you'll fill it in Step 6.
 - `google_drive_folder_url`: optional (see [GOOGLE_DRIVE.md](GOOGLE_DRIVE.md)).
 
-Save the file.
-
 ---
 
 ## Step 4. Install
 
-```bash
-./setup.sh
-```
-
-This time it:
-1. checks your settings (any error names the exact key to fix — fix it and run again),
+`start.sh` continues straight into the install (it runs `./setup.sh` for you). This:
+1. checks your settings (any error names the exact key to fix: run `./start.sh` again and choose Edit),
 2. creates a Python environment in `~/.job-hunt-kit` and installs Playwright + Chromium (a few minutes the first time),
 3. copies the refresh scripts and your resumes into `~/.job-hunt-kit`,
 4. registers one morning job per enabled portal (`com.jobhuntkit.<portal>-refresh`),
 5. writes your ready-to-paste agent prompts into `build/prompts/`.
 
-✅ It ends with a "Next steps" list. Warnings about `board_url` are expected at this point.
-
-Check the jobs are registered:
+✅ A warning about `board_url` is expected at this point. After any later settings change, run
+`./setup.sh` (or `./start.sh`) again. Check everything with:
 ```bash
-launchctl list | grep jobhuntkit
+./scripts/doctor.sh
 ```
 
 ---
 
 ## Step 5. Sign in to each job site once
 
-For every portal you enabled:
+`start.sh` offers to do this for you, one site at a time. To do it yourself, for every portal you enabled:
 ```bash
 ./scripts/login.sh naukri
 ./scripts/login.sh hirist
@@ -198,10 +210,9 @@ FORCE=1 ~/.job-hunt-kit/refresh/run_daily.sh hirist
    > *Publish this file as an artifact titled "Job Hunt Board" with the `db` and `user` capabilities.*
 3. Claude replies with a link like `https://claude.ai/artifact/...`. Open it — you should see empty
    columns (To apply, Applied, Interview, …).
-4. Copy that link into `board_url` in `config/settings.yaml`, then run:
-   ```bash
-   ./setup.sh
-   ```
+4. Add that link to your settings: run `./start.sh`, choose **Edit**, press Enter through the
+   questions and paste the link at the board question (or put it into `board_url` in
+   `config/settings.yaml` by hand and run `./setup.sh`).
 5. Load the starting plan into the board. In the same conversation, attach `build/strategy.json` and say:
    > *Write this file into the Job Hunt Board's database as collection `agent`, document `strategy`,
    > and create document `log` in collection `agent` with `{"entries": []}`.*
@@ -236,7 +247,9 @@ Your filled-in prompts are in `build/prompts/`:
 - `inbox_interview.txt`
 - `strategist.txt`
 
-For each one, in Claude create a **new scheduled task**:
+Once the board link is set, `./start.sh` shows each task's schedule and copies each prompt to your
+clipboard when you press Enter. Or ask Claude to create the tasks for you (steps 7–9 of
+[SETUP_WITH_CLAUDE.md](../SETUP_WITH_CLAUDE.md)). By hand, in Claude create a **new scheduled task** for each:
 
 | Task name | Paste this prompt | Schedule |
 |---|---|---|
@@ -306,8 +319,8 @@ Useful habits that worked for the original author: one sharp headline on every s
 
 ## Starting again later
 
-1. Update `config/settings.yaml` (new role, years, CTC, notice period) and your resumes.
-2. `./setup.sh` then `./scripts/resume.sh`.
+1. Run `./start.sh`, choose **Edit**, and update your role, years, CTC, notice period and resumes.
+2. `./scripts/resume.sh`.
 3. `./scripts/login.sh <portal>` for any site that logged you out.
 4. Paste the re-rendered prompts into the three tasks and **enable** them.
 
@@ -321,6 +334,10 @@ Then delete the three scheduled tasks in Claude and, if you like, the board arti
 ---
 
 ## Troubleshooting
+
+First, run `./scripts/doctor.sh`. It checks the Python environment, your settings, the morning jobs,
+saved sign-ins, the last log line per site, paused state and the board link, and prints the fix
+command for anything that's wrong.
 
 | Problem | Fix |
 |---|---|

@@ -12,14 +12,22 @@ git clone https://github.com/<you>/job-hunt-agent-kit.git
 
 Put your master resumes in `~/JobHunt/resumes/` (or anywhere; you'll list the paths in settings).
 
-## 2. First run: create your settings
+## 2. Answer the setup questions
 
 ```bash
 cd ~/JobHunt/job-hunt-agent-kit
-./setup.sh            # creates config/settings.yaml and stops
+./start.sh
 ```
 
-Open `config/settings.yaml` and work through it top to bottom. The parts that matter most:
+`start.sh` checks Python 3 and git, runs the question wizard (`scripts/wizard.py`) which writes
+`config/settings.yaml` for you (Enter accepts the `[default]`; nothing is written until you confirm),
+then installs, offers the portal sign-ins and copies the agent prompts. Re-run it any time and
+choose **Edit** to change answers. Prefer Claude to do it? Use [SETUP_WITH_CLAUDE.md](../SETUP_WITH_CLAUDE.md).
+
+### Advanced: edit settings by hand
+
+Copy `config/settings.example.yaml` to `config/settings.yaml` (or let the first `./setup.sh` do it)
+and work through it top to bottom. The parts that matter most:
 
 - `candidate.facts` and `candidate.years`: the agents may only say what's here. Be specific and honest.
 - `candidate.never_claim`: tools you haven't used. Jobs that require them get skipped.
@@ -29,7 +37,9 @@ Open `config/settings.yaml` and work through it top to bottom. The parts that ma
 - `workspace_folder` / `repo_subpath`: where the repo lives, so the agents can find the tailor tool.
 - Leave `test_mode: true` for the first week.
 
-## 3. Second run: install
+## 3. Install
+
+`start.sh` runs this for you; after editing settings by hand, run it yourself:
 
 ```bash
 ./setup.sh
@@ -38,7 +48,7 @@ Open `config/settings.yaml` and work through it top to bottom. The parts that ma
 This validates the file (errors tell you which key to fix), creates a venv in `~/.job-hunt-kit`,
 installs Playwright and Chromium, copies the refresh scripts and your resumes there, loads one
 launchd job per enabled portal (`com.jobhuntkit.<portal>-refresh`), and writes your prompts to
-`build/prompts/`. Run it again any time you change settings.
+`build/prompts/`. Run it again any time you change settings. `./scripts/doctor.sh` checks the result.
 
 ## 4. Sign in to each portal once
 
@@ -78,6 +88,8 @@ coordinator task.
 | Test one upload now | `FORCE=1 ~/.job-hunt-kit/refresh/run_daily.sh hirist` |
 
 ## Troubleshooting
+
+Start with `./scripts/doctor.sh`: it lists what's wrong and the command that fixes each item.
 
 **"<Portal> needs you to sign in" notification.** The saved session expired or the site asked for
 an OTP. Run `./scripts/login.sh <portal>`. Naukri and Instahyre sessions usually last weeks;
