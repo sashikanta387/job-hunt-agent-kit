@@ -65,7 +65,7 @@ flowchart LR
 After a week, look at what the coordinator logged. If it looks right, set `test_mode: false`, re-run
 `./setup.sh`, and update the coordinator task's prompt with the new `build/prompts/coordinator.txt`.
 
-The full walkthrough with troubleshooting is in [docs/SETUP.md](docs/SETUP.md).
+**New here? Follow [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** — a complete step-by-step guide from a fresh Mac to a running system (about 60–90 minutes). The condensed version is [docs/SETUP.md](docs/SETUP.md).
 
 ## Supported portals
 
